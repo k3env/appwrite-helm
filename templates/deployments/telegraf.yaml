@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-telegraf"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-telegraf"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-telegraf"
+    spec:
+      initContainers:
+      {{- include "influxdbCheck" $ | nindent 6 }}
+      containers:
+      - name: telegraf
+        image: "appwrite/telegraf:1.2.0"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: _APP_INFLUXDB_HOST
+            value: "{{ .Release.Name }}-influxdb.{{ .Release.Namespace }}"
+          - name: _APP_INFLUXDB_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_INFLUXDB_PORT
+        ports:
+          - containerPort: {{ .Values.statsd.port }}
+            name: statsd
+            protocol: UDP

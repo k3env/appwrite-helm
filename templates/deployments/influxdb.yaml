@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-influxdb"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-influxdb"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-influxdb"
+    spec:
+      {{ if .Values.volumes.influxdb.enabled -}}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.volumes.influxdb.pvcName }}
+      {{ end -}}
+      containers:
+      - name: influxdb
+        image: "appwrite/influxdb:1.0.0"
+        imagePullPolicy: IfNotPresent
+        {{ if .Values.volumes.influxdb.enabled -}}
+        volumeMounts:
+        - mountPath: /var/lib/influxdb
+          name: data
+        {{ end -}}
+        ports:
+        - containerPort: {{ .Values.influxdb.port }}
+          name: influxdb
+        {{- include "probeHttp" "influxdb" | nindent 8 -}}

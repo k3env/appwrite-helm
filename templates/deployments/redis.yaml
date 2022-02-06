@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-redis"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-redis"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-redis"
+    spec:
+      {{ if .Values.volumes.redis.enabled -}}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.volumes.redis.pvcName }}
+      {{ end -}}
+      containers:
+      - name: redis
+        image: "redis:6.0-alpine3.12"
+        imagePullPolicy: IfNotPresent
+        {{ if .Values.volumes.redis.enabled -}}
+        volumeMounts:
+        - mountPath: /data
+          name: data
+        {{ end -}}
+        ports:
+        - containerPort: {{ .Values.redis.port }}
+          name: redis
+        {{- include "probeTcp" "redis" | nindent 8 -}}

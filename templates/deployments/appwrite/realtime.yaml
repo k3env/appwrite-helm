@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-realtime"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-realtime"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-realtime"
+    spec:
+      initContainers:
+      {{- include "redisCheck" $ | nindent 6 }}
+      {{- include "dbCheck" $ | nindent 6 }}
+      containers:
+      - name: appwrite-realtime
+        image: "appwrite/appwrite:{{ .Chart.AppVersion }}"
+        imagePullPolicy: IfNotPresent
+        command:
+          - "realtime"
+        ports:
+        - containerPort: 80
+          name: realtime
+        env:
+          - name: _APP_ENV
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_ENV
+          - name: _APP_OPTIONS_ABUSE
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_OPTIONS_ABUSE
+          - name: _APP_OPENSSL_KEY_V1
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_OPENSSL_KEY_V1
+          - name: _APP_USAGE_STATS
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_USAGE_STATS
+          {{- include "redisEnv" $ | nindent 10 }}
+          {{- include "dbEnv" $ | nindent 10 }}

@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-worker-certificates"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-worker-certificates"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-worker-certificates"
+    spec:
+      {{- with .Values.volumes.appwrite }}
+      {{ if ( or .config.enabled .certificates.enabled) -}}
+      volumes:
+      {{ if .config.enabled -}}
+      - name: data-config
+        persistentVolumeClaim:
+          claimName: {{ .config.pvcName }}
+      {{ end -}}
+      {{ if .certificates.enabled -}}
+      - name: data-certificates
+        persistentVolumeClaim:
+          claimName: {{ .certificates.pvcName }}
+      {{ end -}}
+      {{ end -}}
+      {{ end -}}
+      initContainers:
+      {{- include "redisCheck" $ | nindent 6 }}
+      {{- include "dbCheck" $ | nindent 6 }}
+      containers:
+      - name: appwrite-worker-certificates
+        {{- with .Values.volumes.appwrite }}
+        {{ if ( or .config.enabled .certificates.enabled) -}}
+        volumeMounts:
+        {{ if .config.enabled -}}
+        - mountPath: /storage/config
+          name: data-config
+        {{ end -}}
+        {{ if .certificates.enabled -}}
+        - mountPath: /storage/certificates
+          name: data-certificates
+        {{ end -}}
+        {{ end -}}
+        {{ end -}}
+        image: "appwrite/appwrite:{{ .Chart.AppVersion }}"
+        command:
+          - "worker-certificates"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: _APP_ENV
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_ENV
+          - name: _APP_SYSTEM_SECURITY_EMAIL_ADDRESS
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_SYSTEM_SECURITY_EMAIL_ADDRESS
+          - name: _APP_DOMAIN_TARGET
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_DOMAIN_TARGET
+          {{- include "redisEnv" $ | nindent 10 }}
+          {{- include "dbEnv" $ | nindent 10 }}

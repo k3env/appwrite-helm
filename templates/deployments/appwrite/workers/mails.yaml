@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-worker-mails"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-worker-mails"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-worker-mails"
+    spec:
+      initContainers:
+      {{- include "redisCheck" $ | nindent 6 }}
+      containers:
+      - name: appwrite-worker-mails
+        image: "appwrite/appwrite:{{ .Chart.AppVersion }}"
+        command:
+          - "worker-mails"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: _APP_ENV
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_ENV
+          - name: _APP_SYSTEM_EMAIL_NAME
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_SYSTEM_EMAIL_NAME
+          - name: _APP_SYSTEM_EMAIL_ADDRESS
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_SYSTEM_EMAIL_ADDRESS
+          {{- include "redisEnv" $ | nindent 10 }}
+          {{- include "smtpEnv" $ | nindent 10 }}

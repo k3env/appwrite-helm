@@ -1,0 +1,142 @@
+appwrite:
+  env: "production"
+  locale: "en"
+  sslKey: ""
+  domain: "localhost"
+  options:
+    abuse: true
+    forceHttps: false
+  console:
+    whitelist:
+      root: true
+      emails: []
+      ips: []
+  system:
+    email:
+      name: "Appwrite"
+      addr: "team@appwrite.io"
+    responseFormat: ""
+    securityAddress: "certs@appwrite.io"
+  usageStats: true
+
+ingress:
+  appwrite:
+    enabled: true
+    externalPort: 80
+    annotations: []
+    tls:
+      enabled: true
+      secretName: ""
+  realtime:
+    enabled: true
+    externalPort: 80
+    annotations: []
+    tls:
+      enabled: true
+      secretName: ""
+
+redis:
+  port: 6379
+  user: ""
+  pass: ""
+
+db:
+  port: 3306
+  schema: "appwrite"
+  user: "user"
+  password: "password"
+  rootPass: "rootsecretpassword"
+
+influxdb:
+  port: 8086
+
+statsd:
+  port: 8125
+
+smtp:
+  host: ""
+  port: ""
+  secure: false
+  user: ""
+  pass: ""
+
+storage:
+  limit: 10Mi
+  antivirus:
+    enabled: false
+    host: "clamav"
+    port: 3310
+
+functions:
+  timeout: 900
+  containers: 10
+  cpus: 1
+  memory: 256Mb
+  swap: 256Mb
+  runtimes:
+    - node-16.0
+    - php-8.0
+    - python-3.9
+    - ruby-3.0
+    - java-16.0
+    - dart-2.14
+    - dotnet-5.0
+  envs:
+    - node-16.0
+    - php-7.4
+    - python-3.9
+    - ruby-3.0
+    - java-16.0
+    - dart-2.14
+    - dotnet-5.0
+
+volumes:
+  appwrite:
+    uploads:
+      enabled: true
+      create: true
+      storageClass: ""
+      storageRequest: 100Mi
+      pvcName: "appwrite-uploads-data"
+    cache:
+      enabled: true
+      create: true
+      storageClass: ""
+      storageRequest: 100Mi
+      pvcName: "appwrite-cache-data"
+    config:
+      enabled: true
+      create: true
+      storageClass: ""
+      storageRequest: 100Mi
+      pvcName: "appwrite-config-data"
+    certificates:
+      enabled: true
+      create: true
+      storageClass: ""
+      storageRequest: 100Mi
+      pvcName: "appwrite-certificates-data"
+    functions:
+      enabled: true
+      create: true
+      storageClass: ""
+      storageRequest: 100Mi
+      pvcName: "appwrite-functions-data"
+  mysql:
+    enabled: true
+    create: true
+    storageClass: ""
+    storageRequest: 1Gi
+    pvcName: "mysql-data"
+  influxdb:
+    enabled: true
+    create: true
+    storageClass: ""
+    storageRequest: 1Gi
+    pvcName: "influxdb-data"
+  redis:
+    enabled: true
+    create: true
+    storageClass: ""
+    storageRequest: 1Gi
+    pvcName: "redis-data"

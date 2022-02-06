@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-worker-tasks"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-worker-tasks"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-worker-tasks"
+    spec:
+      initContainers:
+      {{- include "redisCheck" $ | nindent 6 }}
+      {{- include "dbCheck" $ | nindent 6 }}
+      containers:
+      - name: appwrite-worker-tasks
+        image: "appwrite/appwrite:{{ .Chart.AppVersion }}"
+        command:
+          - "worker-tasks"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: _APP_ENV
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_ENV
+          - name: _APP_SYSTEM_SECURITY_EMAIL_ADDRESS
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_SYSTEM_SECURITY_EMAIL_ADDRESS
+          - name: _APP_OPENSSL_KEY_V1
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_OPENSSL_KEY_V1
+          {{- include "redisEnv" $ | nindent 10 }}
+          {{- include "dbEnv" $ | nindent 10 }}

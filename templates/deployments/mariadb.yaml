@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-db"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-db"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-db"
+    spec:
+      {{ if .Values.volumes.mysql.enabled -}}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.volumes.mysql.pvcName }}
+      {{ end -}}
+      containers:
+      - name: mariadb
+        image: "appwrite/mariadb:1.2.0"
+        imagePullPolicy: IfNotPresent
+        {{ if .Values.volumes.mysql.enabled -}}
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: data
+        {{ end -}}
+        env:
+          - name: MYSQL_DATABASE
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_DB_SCHEMA
+          - name: MYSQL_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_DB_ROOT_PASS
+          - name: MYSQL_USER
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_DB_USER
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_DB_PASS
+        ports:
+        - containerPort: {{ .Values.db.port }}
+          name: db
+        {{- include "probeTcp" "db" | nindent 8 -}}

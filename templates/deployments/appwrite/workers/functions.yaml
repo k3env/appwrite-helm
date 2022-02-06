@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-worker-functions"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-worker-functions"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-worker-functions"
+    spec:
+      {{ if .Values.volumes.appwrite.functions.enabled -}}
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: {{ .Values.volumes.appwrite.functions.pvcName }}
+      {{ end -}}
+      initContainers:
+      {{- include "redisCheck" $ | nindent 6 }}
+      {{- include "dbCheck" $ | nindent 6 }}
+      containers:
+      - name: appwrite-worker-functions
+        {{ if .Values.volumes.appwrite.functions.enabled -}}
+        volumeMounts:
+        - mountPath: /storage/functions
+          name: data
+        {{ end -}}
+        image: "appwrite/appwrite:{{ .Chart.AppVersion }}"
+        command:
+          - "worker-functions"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: _APP_ENV
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_ENV
+          - name: _APP_OPENSSL_KEY_V1
+            valueFrom:
+              secretKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_OPENSSL_KEY_V1
+          - name: _APP_USAGE_STATS
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_USAGE_STATS
+          - name: _APP_FUNCTIONS_TIMEOUT
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"          
+                key: _APP_FUNCTIONS_TIMEOUT
+          - name: _APP_FUNCTIONS_CONTAINERS
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_FUNCTIONS_CONTAINERS
+          - name: _APP_FUNCTIONS_CPUS
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_FUNCTIONS_CPUS
+          - name: _APP_FUNCTIONS_MEMORY
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_FUNCTIONS_MEMORY
+          - name: _APP_FUNCTIONS_MEMORY_SWAP
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_FUNCTIONS_MEMORY_SWAP
+          - name: _APP_FUNCTIONS_RUNTIMES
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"          
+                key: _APP_FUNCTIONS_RUNTIMES
+          {{- include "redisEnv" $ | nindent 10 }}
+          {{- include "dbEnv" $ | nindent 10 }}

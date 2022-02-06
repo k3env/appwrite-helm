@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-worker-usage"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-worker-usage"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-worker-usage"
+    spec:
+      initContainers:
+      {{- include "redisCheck" $ | nindent 6 }}
+      containers:
+      - name: appwrite-worker-usage
+        image: "appwrite/appwrite:{{ .Chart.AppVersion }}"
+        command:
+          - "worker-usage"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: _APP_ENV
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_ENV
+          - name: _APP_STATSD_HOST
+            value: "{{ .Release.Name }}-telegraf.{{ .Release.Namespace }}"
+          - name: _APP_STATSD_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_STATSD_PORT
+          {{- include "redisEnv" $ | nindent 10 }}

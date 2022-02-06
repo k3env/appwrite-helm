@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-worker-deletes"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-worker-deletes"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-worker-deletes"
+    spec:
+      {{- with .Values.volumes.appwrite }}
+      {{ if (or (or .uploads.enabled .cache.enabled) .certificates.enabled) -}}
+      volumes:
+      {{ if .uploads.enabled -}}
+      - name: data-uploads
+        persistentVolumeClaim:
+          claimName: {{ .uploads.pvcName }}
+      {{ end -}}
+      {{ if .cache.enabled -}}
+      - name: data-cache
+        persistentVolumeClaim:
+          claimName: {{ .cache.pvcName }}
+      {{ end -}}
+      {{ if .certificates.enabled -}}
+      - name: data-certificates
+        persistentVolumeClaim:
+          claimName: {{ .certificates.pvcName }}
+      {{ end -}}
+      {{ end -}}
+      {{ end -}}
+      initContainers:
+      {{- include "redisCheck" $ | nindent 6 }}
+      {{- include "dbCheck" $ | nindent 6 }}
+      containers:
+      - name: appwrite-worker-deletes
+        {{- with .Values.volumes.appwrite }}
+        {{ if (or (or .uploads.enabled .cache.enabled) .certificates.enabled) -}}
+        volumeMounts:
+        {{ if .uploads.enabled -}}
+        - mountPath: /storage/uploads
+          name: data-uploads
+        {{ end -}}
+        {{ if .cache.enabled -}}
+        - mountPath: /storage/cache
+          name: data-cache
+        {{ end -}}
+        {{ if .certificates.enabled -}}
+        - mountPath: /storage/certificates
+          name: data-certificates
+        {{ end -}}
+        {{ end -}}
+        {{ end -}}
+        image: "appwrite/appwrite:{{ .Chart.AppVersion }}"
+        command:
+          - "worker-deletes"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: _APP_ENV
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_ENV
+          {{- include "redisEnv" $ | nindent 10 }}
+          {{- include "dbEnv" $ | nindent 10 }}

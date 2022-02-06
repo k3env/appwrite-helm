@@ -1,0 +1,15 @@
+{{- with .Values.volumes.appwrite.uploads }}
+{{- if (and .enabled .create) -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .pvcName }}
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: {{ .storageRequest }}
+  storageClassName: {{ .storageClass }}
+{{- end -}}
+{{- end -}}

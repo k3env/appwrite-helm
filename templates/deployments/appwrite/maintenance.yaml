@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-maintenance"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-maintenance"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-maintenance"
+    spec:
+      initContainers:
+      {{- include "redisCheck" $ | nindent 6 }}
+      containers:
+      - name: appwrite-maintenance
+        image: "appwrite/appwrite:{{ .Chart.AppVersion }}"
+        command:
+          - "maintenance"
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: _APP_ENV
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_ENV
+          {{- include "redisEnv" $ | nindent 10 }}
+          {{/*- name: _APP_MAINTENANCE_INTERVAL
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_MAINTENANCE_INTERVAL
+          - name: _APP_MAINTENANCE_RETENTION_EXECUTION
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_MAINTENANCE_RETENTION_EXECUTION
+          - name: _APP_MAINTENANCE_RETENTION_ABUSE
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_MAINTENANCE_RETENTION_ABUSE
+          - name: _APP_MAINTENANCE_RETENTION_AUDIT
+            valueFrom:
+              configMapKeyRef:
+                name: "{{ .Release.Name }}-env"
+                key: _APP_MAINTENANCE_RETENTION_AUDIT */}}

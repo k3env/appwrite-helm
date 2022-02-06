@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "{{ .Release.Name }}-appwrite"
+spec:
+  selector:
+    matchLabels:
+      app: "{{ .Release.Name }}-appwrite"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: "{{ .Release.Name }}-appwrite"
+    spec:
+      {{- with .Values.volumes.appwrite }}
+      {{ if (or (or (or .config.uploads .cache.enabled) (or .config.enabled .certificates.enabled)) .functions.enabled) -}}
+      volumes:
+      {{ if .config.enabled -}}
+      - name: data-config
+        persistentVolumeClaim:
+          claimName: {{ .config.pvcName }}
+      {{ end -}}
+      {{ if .cache.enabled -}}
+      - name: data-cache
+        persistentVolumeClaim:
+          claimName: {{ .cache.pvcName }}
+      {{ end -}}
+      {{ if .uploads.enabled -}}
+      - name: data-uploads
+        persistentVolumeClaim:
+          claimName: {{ .uploads.pvcName }}
+      {{ end -}}
+      {{ if .certificates.enabled -}}
+      - name: data-certificates
+        persistentVolumeClaim:
+          claimName: {{ .certificates.pvcName }}
+      {{ end -}}
+      {{ if .functions.enabled -}}
+      - name: data-functions
+        persistentVolumeClaim:
+          claimName: {{ .functions.pvcName }}
+      {{ end -}}
+      {{ end -}}
+      {{ end -}}
+      initContainers:
+      {{- include "redisCheck" $ | nindent 6 }}
+      {{- include "dbCheck" $ | nindent 6 }}
+      {{- include "influxdbCheck" $ | nindent 6 }}
+      containers:
+      - name: appwrite-appwrite
+        image: "appwrite/appwrite:{{ .Chart.AppVersion }}"
+        imagePullPolicy: IfNotPresent
+        {{- with .Values.volumes.appwrite }}
+        {{ if (or (or (or .config.uploads .cache.enabled) (or .config.enabled .certificates.enabled)) .functions.enabled) -}}
+        volumeMounts:
+        {{ if .uploads.enabled -}}
+        - mountPath: /storage/uploads
+          name: data-uploads
+        {{ end -}}
+        {{ if .cache.enabled -}}
+        - mountPath: /storage/cache
+          name: data-cache
+        {{ end -}}
+        {{ if .config.enabled -}}
+        - mountPath: /storage/config
+          name: data-config
+        {{ end -}}
+        {{ if .certificates.enabled -}}
+        - mountPath: /storage/certificates
+          name: data-certificates
+        {{ end -}}
+        {{ if .functions.enabled -}}
+        - mountPath: /storage/functions
+          name: data-functions
+        {{ end -}}
+        {{ end -}}
+        {{ end -}}
+        ports:
+        - containerPort: 80
+          name: appwrite
+        env:
+          - name: _APP_DB_HOST
+            value: "{{ .Release.Name }}-db.{{ .Release.Namespace }}"
+          - name: _APP_INFLUXDB_HOST
+            value: "{{ .Release.Name }}-influxdb.{{ .Release.Namespace }}"
+          - name: _APP_REDIS_HOST
+            value: "{{ .Release.Name }}-redis.{{ .Release.Namespace }}"
+        envFrom:
+        - configMapRef:
+            name: {{ .Release.Name }}-env
+        - secretRef:
+            name: {{ .Release.Name }}-env
